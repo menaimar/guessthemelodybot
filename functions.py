@@ -34,6 +34,7 @@ def search(name, artist, stype="track"):
     params = {"q": f"track:{name} artist:{artist}", "type": stype}
     r = requests.get(url, headers=headers, params=params)
     return r.json()["tracks"]["items"][0]["preview_url"]
+# here
 
 
 def songs(id):

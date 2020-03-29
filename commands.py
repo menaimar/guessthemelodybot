@@ -148,11 +148,24 @@ class Commands:
 
     def send_question(self, chat_id):
         current_question = self.cache[chat_id]['current_question']
-        self.bot.send_audio(
-            chat_id,
-            list(self.cache[chat_id]["questions"].values())[current_question],
-            reply_markup=self.get_answer_keyboard(current_question, chat_id)
-        )
+        cur = list(self.cache[chat_id]["questions"])[current_question]
+        allsongs = open_json("data/allsongs.json")
+        if cur in list(allsongs.keys()):
+            self.bot.send_audio(chat_id, allsongs[cur], reply_markup=self.get_answer_keyboard(current_question, chat_id))
+        else:
+            m = self.bot.send_audio(channel_id, list(self.cache[chat_id]["questions"].values())[current_question])
+            id = m.json["audio"]["file_id"]
+            db = {cur: id}
+            with open("data/allsongs.json", "r+") as file:
+                data = json.load(file)
+                data.update(db)
+                file.seek(0)
+                json.dump(data, file)
+            self.bot.send_audio(
+                chat_id,
+                id,
+                reply_markup=self.get_answer_keyboard(current_question, chat_id)
+            )
 
     def get_answer_keyboard(self, num, chat_id, n=4, width=2):
         answers = []

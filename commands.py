@@ -37,7 +37,7 @@ class Commands:
         self.bot.send_message(chat_id, "Меню",
                               reply_markup=createKeyboard(2, list(map(lambda x: emoji.emojize(x, use_aliases=True),
                                                                       menu.keys()))))
-
+        self.cache[chat_id]["state"] = states["nothing"]
 
     def settings(self, chat_id):
         self.bot.send_message(chat_id, reply_markup=createKeyboardWithMenu(1,
@@ -71,11 +71,14 @@ class Commands:
         chat_id = message.json["chat"]["id"]
         category = message.text
         if category in categories:
-            if categories[category] is dict:
+            if type(categories[category]) is dict:
                 self.bot.send_message(chat_id, "Выберите",
-                                      reply_markup=createKeyboardWithMenu(2, categories[category].keys(), onetime=True))
+                                      reply_markup=createKeyboardWithMenu(2, list(categories[category].keys()), onetime=True))
                 self.cache[chat_id]["category"] = category
                 self.cache[chat_id]["state"] = states["choosing"]
+            elif categories[category] == "own":
+                self.bot.send_message(chat_id, "Отправьте ссылку на плейлист в Spotify")
+                self.cache[chat_id]["state"] = states["ownchoosing"]
             else:
                 self.maingame(chat_id, playlistid=categories[category])
                 self.cache[chat_id]["state"] = states["play"]
@@ -88,7 +91,15 @@ class Commands:
             chat_id = smth.json["chat"]["id"]
             text = smth.text
         if self.cache[chat_id]["state"] == states["choosing"]:
-            playlistid = random.choice(categories[self.cache[chat_id]["category"]][text])
+            if type(categories[self.cache[chat_id]["category"]][text]) is list:
+                playlistid = random.choice(categories[self.cache[chat_id]["category"]][text])
+            else:
+                playlistid = categories[self.cache[chat_id]["category"]][text]
+            self.cache[chat_id]["state"] = states["play"]
+        elif self.cache[chat_id]["state"] == states["ownchoosing"]:
+            playlistid = text.split("playlist/")[-1].split("?")[0]
+            print(playlistid)
+            self.cache[chat_id]["state"] = states["play"]
         if len(self.cache[chat_id]["questions"]) == 0:
             self.cache[chat_id].update({
                 "state": states["play"],
@@ -101,14 +112,11 @@ class Commands:
             return
         current_question = self.cache[chat_id]['current_question']
         right_answer = list(self.cache[chat_id]["questions"].keys())[current_question]
-        print(right_answer)
-        print(text)
         answer = text
         if answer == right_answer:
             self.bot.send_message(chat_id, emoji.emojize("Correct :white_check_mark:", use_aliases=True))
             self.cache[chat_id]["right_answers"] += 1
         else:
-            print(answer)
             self.bot.send_message(chat_id, emoji.emojize("Incorrect :x: \n", use_aliases=True) +
                                   "Right answer is " + right_answer)
 
@@ -132,8 +140,8 @@ class Commands:
 
     def get_questions(self, id, num=10):
         quest = {}
+        keys = list(songs(id).keys())
         for i in range(num):
-            keys = list(songs(id).keys())
             key = keys.pop(random.randint(0, len(keys)-1))
             quest[key] = songs(id)[key]
         return quest
@@ -148,11 +156,10 @@ class Commands:
 
     def get_answer_keyboard(self, num, chat_id, n=4, width=2):
         answers = []
-        question = list(self.cache[chat_id]["questions"].values())[num]
         right_answer = list(self.cache[chat_id]["questions"].keys())[num]
-        all = open_json("all.json")
+        all = open_json("data/all.json")
         for i in range(n - 1):
-            new_a = random.choice(list(all.keys()))
+            new_a = all.pop(random.randint(0, len(all)-1))
             answers.append(new_a)
         answers.append(right_answer)
         random_answers = []

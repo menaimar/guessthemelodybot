@@ -37,11 +37,22 @@ def search(name, artist, stype="track"):
 def songs(id):
     url = f"https://api.spotify.com/v1/playlists/{id}/tracks"
     r = requests.get(url, headers=headers)
-    all = {}
+    songs_list = {}
+    all = open_json("data/all.json")
+    newsongs = []
     for song in r.json()["items"]:
+        songname = song["track"]["name"] + " - " + " & ".join(list(map(lambda x: x["name"], song["track"]["artists"])))
+        if songname not in all:
+            newsongs.append(songname)
         if song["track"]["preview_url"] is not None:
-            all[" & ".join(list(map(lambda x: x["name"], song["track"]["artists"])))] = song["track"]["preview_url"]
-    return all
+            songs_list[songname] = song["track"]["preview_url"]
+    with open("data/all.json", "r+", encoding="utf-8") as f:
+        data = json.load(f)
+        for newsong in newsongs:
+            data.append(newsong)
+        f.seek(0)
+        json.dump(data, f, indent=4)
+    return songs_list
 
 
 def pop_keys_from_dict(d: dict, keys):

@@ -61,9 +61,11 @@ def main(message):
         if chat_id in com.cache:
             com.cache[chat_id] = pop_keys_from_dict(com.cache[chat_id], list(com.cache[chat_id].keys()))
         com.exe("menu", chat_id)
+        return
 
     if text in menu.keys():
         com.exe(menu[text], chat_id)
+        return
 
     if state == states["game"]:
         com.exe("game", message)
@@ -71,12 +73,15 @@ def main(message):
 
     elif state == states["settings"]:
         com.exe("changing", chat_id)
+        return
 
     elif state == states["feedback"]:
         com.exe("gettingfeedback", chat_id)
+        return
 
-    elif state == states["play"]:
+    elif state in [states["play"], states["choosing"], states["ownchoosing"]]:
         com.exe("maingame", message)
+        return 
 
 
 bot.polling()
